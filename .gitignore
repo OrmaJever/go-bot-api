@@ -1,0 +1,6 @@
+.idea
+.env
+.DS_Store
+go-bot-api/file.log
+postgresql/data
+mongodb/data

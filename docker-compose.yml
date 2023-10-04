@@ -1,0 +1,28 @@
+version: "3.7"
+services:
+    app:
+        build: ./go-bot-api
+        restart: on-failure
+
+    postgres:
+        image: postgres:13
+        restart: on-failure
+        environment:
+            - POSTGRES_DB=tracker
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-aKL2dmDxs10m}
+        ports:
+            - ${TG_POSTGRES_PORT:-5431}:5432
+        volumes:
+            - ./postgresql/data:/var/lib/postgresql/data
+
+    mongo:
+        image: mongo
+        restart: always
+        ports:
+            - ${TG_MONGO_PORT:-27018}:27017
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-aKL2dmDxs10m}
+        volumes:
+            - ./mongodb/data:/data/db
+        command: mongod
