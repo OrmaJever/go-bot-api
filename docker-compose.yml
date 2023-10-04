@@ -3,6 +3,8 @@ services:
     app:
         build: ./go-bot-api
         restart: on-failure
+        ports:
+            - ${TG_NGINX_PORT:-80}:80
         links:
             - postgres
             - mongo
