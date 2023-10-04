@@ -19,9 +19,9 @@ func Handler(c *gin.Context) {
 	botSecret := c.GetHeader("X-Telegram-Bot-Api-Secret-Token")
 
 	bot := models.Bot{}
-	err := Postgres.Model(&bot).Where("secret = ?", botSecret).Select()
+	Postgres.Model(&bot).Where("secret = ?", botSecret).Select()
 
-	if err != nil && err.Error() == "pg: no rows in result set" {
+	if bot.Id == 0 {
 		c.JSON(200, JSON{
 			"ok": true,
 		})
@@ -30,7 +30,7 @@ func Handler(c *gin.Context) {
 
 	var data telegram.Data
 
-	err = c.ShouldBindJSON(&data)
+	c.ShouldBindJSON(&data)
 
 	go CreateWebhook(data)
 	go CallPackages(&bot, &data)
@@ -45,7 +45,7 @@ func CallPackages(bot *models.Bot, data *telegram.Data) {
 
 	command := parseCommand(data)
 
-	var result bool
+	result := len(command) == 0 // если это не комманда то сразу true
 
 	for _, name := range bot.Packages {
 		switch name {
