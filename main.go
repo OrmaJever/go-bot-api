@@ -42,13 +42,13 @@ func init() {
 	MongoCollection = MongoClient.Database(os.Getenv("MONGO_DB")).Collection(os.Getenv("MONGO_COLLECTION"))
 
 	// Set log stream to file
-	logFile, err := os.OpenFile(os.Getenv("LOG_FILE"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	/*logFile, err := os.OpenFile(os.Getenv("LOG_FILE"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 
 	if err != nil {
 		panic(err)
 	}
 
-	log.SetOutput(logFile)
+	log.SetOutput(logFile)*/
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// Set gin to release
