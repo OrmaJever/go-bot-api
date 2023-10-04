@@ -3,6 +3,12 @@ services:
     app:
         build: ./go-bot-api
         restart: on-failure
+        links:
+            - postgres
+            - mongo
+        depends_on:
+            - postgres
+            - mongo
 
     postgres:
         image: postgres:13
