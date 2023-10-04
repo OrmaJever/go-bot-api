@@ -1,4 +1,4 @@
-package bot_api
+package main
 
 import (
 	"context"

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -62,5 +63,7 @@ func main() {
 	engine := gin.Default()
 
 	engine.POST("/handler", Handler)
-	engine.Run(os.Getenv("LISTEN_ADDR"))
+	err := engine.Run(os.Getenv("LISTEN_ADDR"))
+
+	panic(err)
 }
