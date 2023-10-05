@@ -16,28 +16,29 @@ import (
 )
 
 func Handler(c *gin.Context) {
+	c.JSON(200, JSON{
+		"ok": true,
+	})
+
 	botSecret := c.GetHeader("X-Telegram-Bot-Api-Secret-Token")
 
 	bot := models.Bot{}
 	Postgres.Model(&bot).Where("secret = ?", botSecret).Select()
 
 	if bot.Id == 0 {
-		c.JSON(200, JSON{
-			"ok": true,
-		})
 		return
 	}
 
 	var data telegram.Data
+	err := c.ShouldBindJSON(&data)
 
-	c.ShouldBindJSON(&data)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	go CreateWebhook(data)
 	go CallPackages(&bot, &data)
-
-	c.JSON(200, JSON{
-		"ok": true,
-	})
 }
 
 func CallPackages(bot *models.Bot, data *telegram.Data) {
