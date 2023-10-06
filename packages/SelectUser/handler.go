@@ -100,12 +100,12 @@ func check(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		    max(su.id) id, 
 		    max(su.chat_id) chat_id, 
 		    max(su.customize_id) customize_id, 
-		    count(su.*) count,
+		    count(su.tg_id) count,
 			max(u.first_name) first_name,
 			max(u.username) username
 		FROM selected_users su
 		JOIN users u ON u.tg_id = su.tg_id
-		WHERE su.chat_id = ?
+		WHERE su.chat_id = ? and u.chat_id = su.chat_id
 		GROUP BY su.tg_id
 		ORDER BY count(su.*) desc
 	`
@@ -204,7 +204,7 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 	time.Sleep(1 * time.Second)
 
 	text = fmt.Sprintf(trans("pidor_text"), user.FirstName, tgApi.Format(user.Username))
-	fmt.Println(text)
+
 	if customize.Id != 0 {
 		tgApi.SendPhoto(data.Message.Chat.Id, customize.Image, text, true, true)
 	} else {
