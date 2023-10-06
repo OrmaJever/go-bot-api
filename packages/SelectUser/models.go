@@ -30,6 +30,6 @@ type SelectedUser struct {
 	CustomizeId int32     `json:"customize_id"`
 	CreatedAt   string    `json:"created_at"`
 	UpdatedAt   string    `json:"updated_at"`
-	User        User      `json:"user" pg:"rel:has-one,fk:tg_id,join_fk:tg_id"`
+	User        User      `json:"user" pg:"rel:has-one, fk:tg_id, join_fk:tg_id"`
 	Customize   Customize `json:"customize" pg:"rel:has-one"`
 }

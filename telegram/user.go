@@ -7,7 +7,7 @@ type User struct {
 	LastName                string `json:"last_name"`
 	Username                string `json:"username"`
 	LanguageCode            string `json:"language_code"`
-	IsPremium               string `json:"is_premium"`
+	IsPremium               bool   `json:"is_premium"`
 	AddedToAttachmentMenu   bool   `json:"added_to_attachment_menu"`
 	CanJoinGroups           bool   `json:"can_join_groups"`
 	CanReadAllGroupMessages bool   `json:"can_read_all_group_messages"`

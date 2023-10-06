@@ -20,6 +20,8 @@ var Commands map[string]callback
 var postgres *pg.DB
 var lang map[string]string
 
+var sleep time.Time
+
 func init() {
 	Commands = make(map[string]callback)
 	Commands["reg"] = reg
@@ -41,6 +43,10 @@ func init() {
 		Password: os.Getenv("PG_PASSWORD"),
 		Database: "select_user",
 	})
+
+	if os.Getenv("PG_DEBUG") == "true" {
+		postgres.AddQueryHook(services.PostgresLogger{})
+	}
 }
 
 func reg(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
@@ -124,15 +130,27 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		return
 	}
 
+	if time.Now().Sub(sleep).Minutes() < 3 {
+		tgApi.SendMessage(data.Message.Chat.Id, trans("too_fast"), false, true)
+		return
+	} else {
+		sleep = time.Now()
+	}
+
 	var todayUser SelectedUser
 
 	postgres.Model(&todayUser).
-		Where("chat_id = ?", data.Message.Chat.Id).
-		Where("created_at = ?", time.Now().Format("2006-01-02")).
-		Select()
+		Where("su.chat_id = ?", data.Message.Chat.Id).
+		Where("date(su.created_at) = ?", time.Now().Format("2006-01-02")).
+		Relation("User").
+		First()
 
 	if todayUser.Id > 0 {
-		text := fmt.Sprintf(trans("already_run"), todayUser.User.FirstName, todayUser.User.Username)
+		text := fmt.Sprintf(
+			trans("already_run"),
+			todayUser.User.FirstName,
+			tgApi.Format(todayUser.User.Username),
+		)
 
 		if len(todayUser.Customize.Image) > 0 {
 			tgApi.SendPhoto(data.Message.Chat.Id, todayUser.Customize.Image, text, true, true)
@@ -166,9 +184,16 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		ChatId:      data.Message.Chat.Id,
 		Type:        1,
 		CustomizeId: customize.Id,
+		CreatedAt:   time.Now().Format(time.RFC3339),
+		UpdatedAt:   time.Now().Format(time.RFC3339),
 	}
 
-	postgres.Model(&selectedUser).Insert()
+	_, err := postgres.Model(&selectedUser).Insert()
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
@@ -178,8 +203,8 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
 	time.Sleep(1 * time.Second)
 
-	text = fmt.Sprintf(trans("pidor_text"), user.FirstName, user.Username)
-
+	text = fmt.Sprintf(trans("pidor_text"), user.FirstName, tgApi.Format(user.Username))
+	fmt.Println(text)
 	if customize.Id != 0 {
 		tgApi.SendPhoto(data.Message.Chat.Id, customize.Image, text, true, true)
 	} else {

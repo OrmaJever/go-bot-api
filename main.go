@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"main/services"
 	"os"
 )
 
@@ -32,6 +33,10 @@ func init() {
 		Database: os.Getenv("PG_DATABASE"),
 	})
 
+	if os.Getenv("PG_DEBUG") == "true" {
+		Postgres.AddQueryHook(services.PostgresLogger{})
+	}
+
 	// connect to Mongo
 	MongoClient, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_CONNECTION")))
 
@@ -49,6 +54,7 @@ func init() {
 	}
 
 	log.SetOutput(logFile)*/
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// Set gin to release

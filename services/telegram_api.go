@@ -16,6 +16,12 @@ type Telegram struct {
 	token string
 }
 
+type BadResponse struct {
+	Ok          bool   `json:"ok"`
+	ErrorCode   int16  `json:"result"`
+	Description string `json:"description"`
+}
+
 func CreateTelegram(token string) Telegram {
 	return Telegram{token: token}
 }
@@ -35,13 +41,19 @@ func (t *Telegram) SendMessage(chatId int64, text string, protect bool, silence 
 		data["disable_notification"] = "true"
 	}
 
-	t.sendRequest("sendMessage", data)
+	res, code := t.sendRequest("sendMessage", data)
+
+	if code == 400 {
+		var badResponse BadResponse
+		json.Unmarshal(res, &badResponse)
+		log.Println(badResponse.Description)
+	}
 }
 
 func (t *Telegram) SendPhoto(chatId int64, fileId string, text string, protect bool, silence bool) {
 	var data = make(map[string]string)
 	data["chat_id"] = strconv.FormatInt(chatId, 10)
-	data["text"] = text
+	data["caption"] = text
 	data["parse_mode"] = "Markdown"
 	data["disable_web_page_preview"] = "true"
 	data["photo"] = fileId
@@ -54,7 +66,13 @@ func (t *Telegram) SendPhoto(chatId int64, fileId string, text string, protect b
 		data["disable_notification"] = "true"
 	}
 
-	fmt.Printf("%s\n", t.sendRequest("sendPhoto", data))
+	res, code := t.sendRequest("sendPhoto", data)
+
+	if code == 400 {
+		var badResponse BadResponse
+		json.Unmarshal(res, &badResponse)
+		log.Println(badResponse.Description)
+	}
 }
 
 func (t *Telegram) SendVoice(chatId int64, fileId string, protect bool, silence bool) {
@@ -72,14 +90,27 @@ func (t *Telegram) SendVoice(chatId int64, fileId string, protect bool, silence 
 		data["protect_content"] = "true"
 	}
 
-	t.sendRequest("sendVoice", data)
+	res, code := t.sendRequest("sendVoice", data)
+
+	if code == 400 {
+		var badResponse BadResponse
+		json.Unmarshal(res, &badResponse)
+		log.Println(badResponse.Description)
+	}
 }
 
 func (t *Telegram) GetFile(fileId string) telegram.File {
 	var data = make(map[string]string)
 	data["file_id"] = fileId
 
-	res := t.sendRequest("getFile", data)
+	res, code := t.sendRequest("getFile", data)
+
+	if code == 400 {
+		var badResponse BadResponse
+		json.Unmarshal(res, &badResponse)
+		log.Println(badResponse.Description)
+		return telegram.File{}
+	}
 
 	result := struct {
 		Ok     bool          `json:"ok"`
@@ -105,29 +136,29 @@ func (t *Telegram) Format(text string) string {
 	return text
 }
 
-func (t *Telegram) sendRequest(method string, params any) []byte {
+func (t *Telegram) sendRequest(method string, params any) ([]byte, int) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/%s", t.token, method)
 
 	body, err := json.Marshal(params)
 
 	if err != nil {
 		log.Println(err)
-		return []byte{}
+		return []byte{}, 0
 	}
 
 	response, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 
 	if err != nil {
 		log.Println(err)
-		return []byte{}
+		return []byte{}, 0
 	}
 
 	resBody, err := io.ReadAll(response.Body)
 
 	if err != nil {
 		log.Println(err)
-		return []byte{}
+		return []byte{}, 0
 	}
 
-	return resBody
+	return resBody, response.StatusCode
 }
