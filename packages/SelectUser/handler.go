@@ -143,6 +143,7 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		Where("su.chat_id = ?", data.Message.Chat.Id).
 		Where("date(su.created_at) = ?", time.Now().Format("2006-01-02")).
 		Relation("User").
+		Relation("Customize").
 		First()
 
 	if todayUser.Id > 0 {

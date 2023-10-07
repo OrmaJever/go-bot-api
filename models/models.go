@@ -6,4 +6,5 @@ type Bot struct {
 	Secret   string   `json:"secret"`
 	AdminId  int64    `json:"admin_id"`
 	Packages []string `json:"packages"`
+	Name     string   `json:"name"`
 }
