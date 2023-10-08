@@ -28,6 +28,7 @@ var postgres *pg.DB
 var lang map[string]string
 
 const chatId int64 = -1001524992976
+const botName = "pidor_bp_bot"
 
 type user struct {
 	TgId      int64  `bson:"_id"`
@@ -89,7 +90,7 @@ func calculateStatistic() {
 	var bot models.Bot
 
 	postgres.Model(&bot).
-		Where("name = ?", "orma_test_bot").
+		Where("name = ?", botName).
 		Select()
 
 	text := getFormattedText(chatId)
