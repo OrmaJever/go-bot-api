@@ -27,8 +27,8 @@ var mongoCollection *mongo.Collection
 var postgres *pg.DB
 var lang map[string]string
 
-const chatId int64 = -1001524992976
-const botName = "pidor_bp_bot"
+const chatId int64 = 236427004  //-1001524992976
+const botName = "orma_test_bot" //"pidor_bp_bot"
 
 type user struct {
 	TgId      int64  `bson:"_id"`
@@ -51,17 +51,7 @@ func init() {
 	lang = loadLang("ua")
 
 	// run cron goroutine
-	go cron("23:59")
-}
-
-func cron(t string) {
-	for {
-		if time.Now().Format("15:04") == t {
-			calculateStatistic()
-		}
-
-		time.Sleep(1 * time.Minute)
-	}
+	go services.Cron("23:59", calculateStatistic)
 }
 
 func Message(_ *telegram.Data, _ *services.Telegram, _ *models.Bot) {}
@@ -72,8 +62,10 @@ func calculateStatistic() {
 		Addr:     os.Getenv("PG_ADDR"),
 		User:     os.Getenv("PG_USER"),
 		Password: os.Getenv("PG_PASSWORD"),
-		Database: os.Getenv("PG_DATABASE"),
+		Database: "select_user",
 	})
+
+	postgres.AddQueryHook(services.PostgresLogger{})
 
 	// Connect to Mongo
 	mongoClient, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_CONNECTION")))
@@ -95,8 +87,10 @@ func calculateStatistic() {
 
 	text := getFormattedText(chatId)
 
-	tgApi := services.CreateTelegram(bot.Token)
-	tgApi.SendMessage(chatId, text, true, true)
+	if len(text) > 0 {
+		tgApi := services.CreateTelegram(bot.Token)
+		tgApi.SendMessage(chatId, text, true, true)
+	}
 }
 
 func getFormattedText(chatId int64) string {
@@ -138,6 +132,10 @@ func getFormattedText(chatId int64) string {
 
 	wg.Wait()
 
+	if allMessageCount == 0 {
+		return ""
+	}
+
 	text := trans("header")
 	text += fmt.Sprintf(trans("all_messages"), allMessageCount)
 
@@ -175,7 +173,6 @@ func getFormattedText(chatId int64) string {
 
 func getAllMessage(chatId int64) int64 {
 	filter := getFilters(chatId)
-	filter["message.entities.0.type"] = bson.M{"$ne": "bot_command"}
 	count, err := mongoCollection.CountDocuments(context.Background(), filter)
 
 	if err != nil {
@@ -252,19 +249,27 @@ func getTopUsers(chatId int64) []user {
 }
 
 func getInactiveUsers(chatId int64, activeUsers []user) []user {
-	var activeIds = make([]int64, len(activeUsers))
 
-	for _, us := range activeUsers {
-		activeIds = append(activeIds, us.TgId)
+	var activeIds []int64
+	if len(activeUsers) > 0 {
+		activeIds = make([]int64, len(activeUsers))
+
+		for _, us := range activeUsers {
+			activeIds = append(activeIds, us.TgId)
+		}
 	}
 
 	var users []user
 
-	err := postgres.Model(&users).
+	query := postgres.Model(&users).
 		ColumnExpr("tg_id as _id, first_name, username").
-		Where("chat_id = ?", chatId).
-		WhereIn("tg_id = ?", activeIds).
-		Select()
+		Where("chat_id = ?", chatId)
+
+	if len(activeIds) > 0 {
+		query = query.WhereIn("tg_id = ?", activeIds)
+	}
+
+	err := query.Select()
 
 	if err != nil {
 		log.Println(err)
@@ -311,8 +316,9 @@ func getFilters(chatId int64) bson.M {
 			"$gte": start,
 			"$lte": end,
 		},
-		"message.chat.id": chatId,
-		"message":         bson.M{"$ne": nil},
+		"message.chat.id":         chatId,
+		"message":                 bson.M{"$ne": nil},
+		"message.entities.0.type": bson.M{"$ne": "bot_command"},
 	}
 }
 

@@ -55,7 +55,7 @@ func init() {
 
 	log.SetOutput(logFile)*/
 
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Llongfile)
 
 	// Set gin to release
 	if os.Getenv("GIN_MODE") == "release" {

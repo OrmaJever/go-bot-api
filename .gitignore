@@ -1,5 +1,5 @@
 .idea
-.env
+go/.env
 .DS_Store
 file.log
 postgresql/data

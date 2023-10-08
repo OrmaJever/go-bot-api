@@ -1,7 +1,7 @@
 version: "3.7"
 services:
     app:
-        image: golang:1.20
+        build: ./go
         restart: on-failure
         ports:
             - ${TG_NGINX_PORT:-88}:80
@@ -11,9 +11,6 @@ services:
         depends_on:
             - postgres
             - mongo
-        volumes:
-            - ./:/var/bot
-        command: "bash -c /var/bot/run.sh"
 
     postgres:
         image: postgres:13
