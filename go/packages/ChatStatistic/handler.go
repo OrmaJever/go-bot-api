@@ -27,8 +27,8 @@ var mongoCollection *mongo.Collection
 var postgres *pg.DB
 var lang map[string]string
 
-const chatId int64 = 236427004  //-1001524992976
-const botName = "orma_test_bot" //"pidor_bp_bot"
+const chatId int64 = -1001524992976
+const botName = "pidor_bp_bot"
 
 type user struct {
 	TgId      int64  `bson:"_id"`
