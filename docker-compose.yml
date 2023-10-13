@@ -1,7 +1,7 @@
 version: "3.7"
 services:
     app:
-        build: ./go
+        build: app
         restart: on-failure
         ports:
             - ${TG_NGINX_PORT:-88}:80
