@@ -22,7 +22,6 @@ import (
 type callback func(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot)
 
 var Commands map[string]callback
-var mongoClient *mongo.Client
 var mongoCollection *mongo.Collection
 var postgres *pg.DB
 var lang map[string]string
