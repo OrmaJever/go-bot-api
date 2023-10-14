@@ -17,7 +17,7 @@ func init() {
 
 func getImage(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
-	if data.Message == nil || data.Message.Chat.Id < 0 {
+	if data.Message == nil || data.Message.IsChat() {
 		return
 	}
 
@@ -25,7 +25,7 @@ func getImage(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 }
 
 func Message(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
-	if data.Message == nil || data.Message.Chat.Id < 0 {
+	if data.Message == nil || data.Message.IsChat() {
 		return
 	}
 

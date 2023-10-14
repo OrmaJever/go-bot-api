@@ -10,7 +10,7 @@ RUN go build -o main ./cmd
 
 FROM alpine
 WORKDIR /app
-RUN apk add --update --no-cache ca-certificates bash
+RUN apk add --update --no-cache ca-certificates bash ffmpeg
 COPY --from=builder /usr/share/zoneinfo/Europe/Kiev /usr/share/zoneinfo/Europe/Kiev
 ENV TZ Europe/Kiev
 COPY . .

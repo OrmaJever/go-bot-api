@@ -73,3 +73,7 @@ type Message struct {
 	WebAppData                    *WebAppData                    `json:"web_app_data"`
 	ReplyMarkup                   *InlineKeyboardMarkup          `json:"reply_markup"`
 }
+
+func (m *Message) IsChat() bool {
+	return m.Chat != nil && m.Chat.Id < 0
+}

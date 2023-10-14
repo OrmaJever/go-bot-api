@@ -14,8 +14,11 @@ import (
 
 type JSON gin.H
 
-var Postgres *pg.DB
-var MongoCollection *mongo.Collection
+var (
+	Postgres        *pg.DB
+	MongoCollection *mongo.Collection
+	Debug           bool
+)
 
 func init() {
 	// Parse env file
@@ -25,6 +28,8 @@ func init() {
 		log.Fatalln(err)
 	}
 
+	Debug = os.Getenv("GIN_MODE") == "debug"
+
 	// Connect to postgres
 	Postgres = pg.Connect(&pg.Options{
 		Addr:     os.Getenv("PG_ADDR"),
@@ -33,7 +38,7 @@ func init() {
 		Database: os.Getenv("PG_DATABASE"),
 	})
 
-	if os.Getenv("PG_DEBUG") == "true" {
+	if Debug {
 		Postgres.AddQueryHook(services.PostgresLogger{})
 	}
 

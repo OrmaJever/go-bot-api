@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-func Cron(t string, callback func()) {
+func Schedule(t string, callback func()) {
 	for {
 		if time.Now().Format("15:04") == t {
-			log.Printf("Execute cron [%s]\n", t)
+			log.Printf("Execute schedule [%s]\n", t)
 			callback()
 		}
 

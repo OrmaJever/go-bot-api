@@ -50,7 +50,7 @@ func init() {
 	lang = loadLang("ua")
 
 	// run cron goroutine
-	go services.Cron("23:59", calculateStatistic)
+	go services.Schedule("23:59", calculateStatistic)
 }
 
 func Message(_ *telegram.Data, _ *services.Telegram, _ *models.Bot) {}

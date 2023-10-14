@@ -31,7 +31,7 @@ func Message(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot) {
 	if data.Message == nil ||
 		data.Message.Voice == nil ||
 		data.Message.Voice.Duration >= 20 ||
-		data.Message.Chat.Id > 0 {
+		!data.Message.IsChat() {
 		return
 	}
 

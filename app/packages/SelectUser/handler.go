@@ -31,11 +31,11 @@ func init() {
 
 	err := godotenv.Load(".env")
 
-	lang = loadLang("ua")
-
 	if err != nil {
 		log.Println(err)
 	}
+
+	lang = loadLang("ua")
 
 	postgres = pg.Connect(&pg.Options{
 		Addr:     os.Getenv("PG_ADDR"),
@@ -44,7 +44,7 @@ func init() {
 		Database: "select_user",
 	})
 
-	if os.Getenv("PG_DEBUG") == "true" {
+	if os.Getenv("GIN_MODE") == "debug" {
 		postgres.AddQueryHook(services.PostgresLogger{})
 	}
 }
@@ -130,7 +130,7 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		return
 	}
 
-	if time.Now().Sub(sleep).Minutes() < 3 {
+	if time.Now().Sub(sleep).Minutes() < 3 && os.Getenv("GIN_MODE") != "debug" {
 		tgApi.SendMessage(data.Message.Chat.Id, trans("too_fast"), false, true)
 		return
 	} else {
