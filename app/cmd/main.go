@@ -6,7 +6,6 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"main/services"
 	"os"
@@ -17,7 +16,7 @@ type JSON gin.H
 var (
 	Postgres        *pg.DB
 	MongoCollection *mongo.Collection
-	Debug           bool
+	MongoClient     *mongo.Client
 )
 
 func init() {
@@ -28,38 +27,13 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	Debug = os.Getenv("GIN_MODE") == "debug"
-
 	// Connect to postgres
-	Postgres = pg.Connect(&pg.Options{
-		Addr:     os.Getenv("PG_ADDR"),
-		User:     os.Getenv("PG_USER"),
-		Password: os.Getenv("PG_PASSWORD"),
-		Database: os.Getenv("PG_DATABASE"),
-	})
-
-	if Debug {
-		Postgres.AddQueryHook(services.PostgresLogger{})
-	}
+	Postgres = services.ConnectToPostgres(os.Getenv("PG_DATABASE"))
 
 	// connect to Mongo
-	MongoClient, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_CONNECTION")))
+	MongoCollection, MongoClient = services.ConnectToMongo()
 
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	MongoCollection = MongoClient.Database(os.Getenv("MONGO_DB")).Collection(os.Getenv("MONGO_COLLECTION"))
-
-	// Set log stream to file
-	/*logFile, err := os.OpenFile(os.Getenv("LOG_FILE"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-
-	if err != nil {
-		panic(err)
-	}
-
-	log.SetOutput(logFile)*/
-
+	// file name and line in logs
 	log.SetFlags(log.LstdFlags | log.Llongfile)
 
 	// Set gin to release
@@ -71,8 +45,10 @@ func init() {
 }
 
 func main() {
-	engine := gin.Default()
+	defer Postgres.Close()
+	defer MongoClient.Disconnect(context.Background())
 
+	engine := gin.Default()
 	engine.POST("/handler", Handler)
 	err := engine.Run(os.Getenv("LISTEN_ADDR"))
 

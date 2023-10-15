@@ -2,20 +2,19 @@ package ChatStatistic
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"main/models"
 	"main/services"
 	"main/telegram"
 	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -50,39 +49,33 @@ func init() {
 	lang = loadLang("ua")
 
 	// run cron goroutine
-	go services.Schedule("23:59", calculateStatistic)
+	go services.Schedule("14:15", calculateStatistic)
 }
 
 func Message(_ *telegram.Data, _ *services.Telegram, _ *models.Bot) {}
 
 func calculateStatistic() {
 	// Connect to Postgres
-	postgres = pg.Connect(&pg.Options{
-		Addr:     os.Getenv("PG_ADDR"),
-		User:     os.Getenv("PG_USER"),
-		Password: os.Getenv("PG_PASSWORD"),
-		Database: "select_user",
-	})
-
-	postgres.AddQueryHook(services.PostgresLogger{})
+	pgTg := services.ConnectToPostgres(os.Getenv("PG_DATABASE"))
+	postgres = services.ConnectToPostgres("select_user")
 
 	// Connect to Mongo
-	mongoClient, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_CONNECTION")))
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	mongoCollection = mongoClient.Database(os.Getenv("MONGO_DB")).Collection(os.Getenv("MONGO_COLLECTION"))
+	var mongoClient *mongo.Client
+	mongoCollection, mongoClient = services.ConnectToMongo()
 
 	defer postgres.Close()
+	defer pgTg.Close()
 	defer mongoClient.Disconnect(context.Background())
 
 	var bot models.Bot
-
-	postgres.Model(&bot).
+	err := pgTg.Model(&bot).
 		Where("name = ?", botName).
 		Select()
+
+	if err == sql.ErrNoRows {
+		log.Printf("Cannot get bot [%s]\n", botName)
+		return
+	}
 
 	text := getFormattedText(chatId)
 
@@ -93,43 +86,13 @@ func calculateStatistic() {
 }
 
 func getFormattedText(chatId int64) string {
-	var allMessageCount, voiceMessageCount, videoNotes, forwardedCount int64
-	var topUsers, inactiveUsers []user
-	var forwarded user
-
-	wg := sync.WaitGroup{}
-	wg.Add(7)
-
-	go func() {
-		allMessageCount = getAllMessage(chatId)
-		wg.Done()
-	}()
-	go func() {
-		voiceMessageCount = getVoiceMessage(chatId)
-		wg.Done()
-	}()
-	go func() {
-		videoNotes = getVideoNotes(chatId)
-		wg.Done()
-	}()
-	go func() {
-		forwardedCount = getForwardedCount(chatId)
-		wg.Done()
-	}()
-	go func() {
-		topUsers = getTopUsers(chatId)
-		wg.Done()
-	}()
-	go func() {
-		inactiveUsers = getInactiveUsers(chatId, topUsers)
-		wg.Done()
-	}()
-	go func() {
-		forwarded = getForwarded(chatId)
-		wg.Done()
-	}()
-
-	wg.Wait()
+	allMessageCount := getAllMessage(chatId)
+	voiceMessageCount := getVoiceMessage(chatId)
+	videoNotes := getVideoNotes(chatId)
+	forwardedCount := getForwardedCount(chatId)
+	topUsers := getTopUsers(chatId)
+	inactiveUsers := getInactiveUsers(chatId, topUsers)
+	forwarded := getForwarded(chatId)
 
 	if allMessageCount == 0 {
 		return ""
@@ -265,7 +228,7 @@ func getInactiveUsers(chatId int64, activeUsers []user) []user {
 		Where("chat_id = ?", chatId)
 
 	if len(activeIds) > 0 {
-		query = query.WhereIn("tg_id = ?", activeIds)
+		query.WhereIn("tg_id in (?)", activeIds)
 	}
 
 	err := query.Select()
