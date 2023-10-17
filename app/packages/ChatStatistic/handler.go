@@ -25,7 +25,7 @@ var mongoCollection *mongo.Collection
 var postgres *pg.DB
 var lang map[string]string
 
-const chatId int64 = -1001524992976
+const chatId int64 = -1001524992976 // 236427004
 const botName = "pidor_bp_bot"
 
 type user struct {
@@ -119,10 +119,13 @@ func getFormattedText(chatId int64) string {
 
 	text += trans("inactive_users")
 	for _, user := range inactiveUsers {
+		if user.Username == "" {
+			user.Username = "-"
+		}
 		text += fmt.Sprintf("*%s* (`%s`), ", user.FirstName, user.Username)
 	}
 
-	text = strings.TrimSuffix(text, ", ")
+	text = strings.TrimSuffix(text, ", ") + "\n"
 
 	if forwarded.TgId != 0 {
 		text += fmt.Sprintf(trans("forwarded_messages"), forwarded.FirstName, forwarded.Username, forwarded.Count)
@@ -228,7 +231,7 @@ func getInactiveUsers(chatId int64, activeUsers []user) []user {
 		Where("chat_id = ?", chatId)
 
 	if len(activeIds) > 0 {
-		query.WhereIn("tg_id in (?)", activeIds)
+		query.WhereIn("tg_id not in (?)", activeIds)
 	}
 
 	err := query.Select()

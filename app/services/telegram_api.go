@@ -130,8 +130,8 @@ func (t *Telegram) Format(text string) string {
 		return "-"
 	}
 
-	text = strings.Replace(text, "_", "\\_", -1)
-	text = strings.Replace(text, "*", "\\*", -1)
+	text = strings.ReplaceAll(text, "_", "\\_")
+	text = strings.ReplaceAll(text, "*", "\\*")
 
 	return text
 }

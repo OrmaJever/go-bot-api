@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"main/models"
+	"main/packages/Admin"
 	"main/packages/ChatStatistic"
 	DebugPackage "main/packages/Debug"
 	"main/packages/GetId"
@@ -105,6 +106,14 @@ func CallPackages(bot *models.Bot, data *telegram.Data) {
 			}
 			break
 
+		case "Admin":
+			if Admin.Commands[command] != nil {
+				Admin.Commands[command](data, &tgApi, bot)
+				result = true
+			} else {
+				Admin.Message(data, &tgApi, bot)
+			}
+
 		default:
 			log.Printf("Can not find package [%s]\n", name)
 		}
@@ -130,7 +139,7 @@ func parseCommand(data *telegram.Data, name string) string {
 
 	command := mess.Text[mess.Entities[0].Offset+1 : mess.Entities[0].Length]
 
-	return strings.Replace(command, "@"+name, "", -1)
+	return strings.ReplaceAll(command, "@"+name, "")
 }
 
 func CreateWebhook(data telegram.Data) {
