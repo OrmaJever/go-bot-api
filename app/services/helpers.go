@@ -7,9 +7,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"main/models"
+	"main/telegram"
 	"os"
 	"time"
 )
+
+type CallbackT func(data *telegram.Data, tgApi *Telegram, bot *models.Bot)
 
 func ConnectToMongo() (*mongo.Collection, *mongo.Client) {
 	MongoClient, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_CONNECTION")))

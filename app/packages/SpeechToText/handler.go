@@ -15,16 +15,16 @@ import (
 	"os/exec"
 )
 
-type callback func(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot)
-
 type WitResult struct {
 	Text string `json:"_text"`
 }
 
-var Commands map[string]callback
+const WIT_URL = "https://api.wit.ai/speech?v=20200422"
+
+var Commands map[string]services.CallbackT
 
 func init() {
-	Commands = make(map[string]callback)
+	Commands = make(map[string]services.CallbackT)
 }
 
 func Message(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot) {
@@ -50,7 +50,12 @@ func Message(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot) {
 
 	tmpFilePath := fmt.Sprintf("%svoice_%d", os.TempDir(), rand.Int())
 
-	os.WriteFile(tmpFilePath, resBody, 0644)
+	err = os.WriteFile(tmpFilePath, resBody, 0644)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	// 3) Конвертируем файл с помощью утилиты ffmpeg в ogg формат
 	err = exec.Command("bash", "-c", fmt.Sprintf("ffmpeg -i %s -f ogg %s.ogg", tmpFilePath, tmpFilePath)).Run()
@@ -70,7 +75,7 @@ func Message(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot) {
 	}
 
 	// 4) Отдаем ogg файл в wit.ai
-	req, err := http.NewRequest("POST", "https://api.wit.ai/speech?v=20200422", bytes.NewBuffer(fileData))
+	req, err := http.NewRequest("POST", WIT_URL, bytes.NewBuffer(fileData))
 
 	if err != nil {
 		log.Println(err)
@@ -98,7 +103,11 @@ func Message(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot) {
 
 	var jsonResult WitResult
 
-	json.Unmarshal(resBody, &jsonResult)
+	err = json.Unmarshal(resBody, &jsonResult)
+
+	if err != nil {
+		return
+	}
 
 	if len(jsonResult.Text) == 0 {
 		return

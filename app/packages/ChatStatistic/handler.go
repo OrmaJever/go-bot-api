@@ -14,19 +14,19 @@ import (
 	"main/services"
 	"main/telegram"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
-type callback func(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot)
-
-var Commands map[string]callback
-var mongoCollection *mongo.Collection
-var postgres *pg.DB
-var lang map[string]string
-
-const chatId int64 = -1001524992976 // 236427004
-const botName = "pidor_bp_bot"
+var (
+	Commands        map[string]services.CallbackT
+	mongoCollection *mongo.Collection
+	postgres        *pg.DB
+	lang            map[string]string
+	chatId          int
+	botName         string
+)
 
 type user struct {
 	TgId      int64  `bson:"_id"`
@@ -36,10 +36,16 @@ type user struct {
 }
 
 func init() {
-	Commands = make(map[string]callback)
+	Commands = make(map[string]services.CallbackT)
+	Commands["chat_statistic"] = statisticCommand
 
 	// Load env
 	err := godotenv.Load(".env")
+
+	// Get env data
+	ci := os.Getenv("STATISTIC_CHAT_ID")
+	chatId, _ = strconv.Atoi(ci)
+	botName = os.Getenv("STATISTIC_BOT_NAME")
 
 	if err != nil {
 		log.Fatalln(err)
@@ -53,6 +59,28 @@ func init() {
 }
 
 func Message(_ *telegram.Data, _ *services.Telegram, _ *models.Bot) {}
+
+func statisticCommand(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot) {
+	if bot.AdminId != data.Message.From.Id {
+		return
+	}
+
+	// Connect to Postgres
+	postgres = services.ConnectToPostgres("select_user")
+
+	// Connect to Mongo
+	var mongoClient *mongo.Client
+	mongoCollection, mongoClient = services.ConnectToMongo()
+
+	defer postgres.Close()
+	defer mongoClient.Disconnect(context.Background())
+
+	text := getFormattedText(chatId)
+
+	if len(text) > 0 {
+		tgApi.SendMessage(int64(chatId), text, true, true)
+	}
+}
 
 func calculateStatistic() {
 	// Connect to Postgres
@@ -70,7 +98,7 @@ func calculateStatistic() {
 	var bot models.Bot
 	err := pgTg.Model(&bot).
 		Where("name = ?", botName).
-		Select()
+		First()
 
 	if err == sql.ErrNoRows {
 		log.Printf("Cannot get bot [%s]\n", botName)
@@ -81,11 +109,11 @@ func calculateStatistic() {
 
 	if len(text) > 0 {
 		tgApi := services.CreateTelegram(bot.Token)
-		tgApi.SendMessage(chatId, text, true, true)
+		tgApi.SendMessage(int64(chatId), text, true, true)
 	}
 }
 
-func getFormattedText(chatId int64) string {
+func getFormattedText(chatId int) string {
 	allMessageCount := getAllMessage(chatId)
 	voiceMessageCount := getVoiceMessage(chatId)
 	videoNotes := getVideoNotes(chatId)
@@ -136,7 +164,7 @@ func getFormattedText(chatId int64) string {
 	return text
 }
 
-func getAllMessage(chatId int64) int64 {
+func getAllMessage(chatId int) int64 {
 	filter := getFilters(chatId)
 	count, err := mongoCollection.CountDocuments(context.Background(), filter)
 
@@ -148,7 +176,7 @@ func getAllMessage(chatId int64) int64 {
 	return count
 }
 
-func getVoiceMessage(chatId int64) int64 {
+func getVoiceMessage(chatId int) int64 {
 	filter := getFilters(chatId)
 	filter["message.voice"] = bson.M{"$ne": nil}
 
@@ -162,7 +190,7 @@ func getVoiceMessage(chatId int64) int64 {
 	return count
 }
 
-func getVideoNotes(chatId int64) int64 {
+func getVideoNotes(chatId int) int64 {
 	filter := getFilters(chatId)
 	filter["message.videonote"] = bson.M{"$ne": nil}
 
@@ -176,7 +204,7 @@ func getVideoNotes(chatId int64) int64 {
 	return count
 }
 
-func getForwardedCount(chatId int64) int64 {
+func getForwardedCount(chatId int) int64 {
 	filter := getFilters(chatId)
 	filter["message.forwardfrom"] = bson.M{"$ne": nil}
 
@@ -190,7 +218,7 @@ func getForwardedCount(chatId int64) int64 {
 	return count
 }
 
-func getTopUsers(chatId int64) []user {
+func getTopUsers(chatId int) []user {
 	match := bson.D{{"$match", getFilters(chatId)}}
 	group := bson.D{{"$group", bson.D{
 		{"_id", "$message.from.id"},
@@ -213,7 +241,7 @@ func getTopUsers(chatId int64) []user {
 	return result
 }
 
-func getInactiveUsers(chatId int64, activeUsers []user) []user {
+func getInactiveUsers(chatId int, activeUsers []user) []user {
 
 	var activeIds []int64
 	if len(activeUsers) > 0 {
@@ -243,7 +271,7 @@ func getInactiveUsers(chatId int64, activeUsers []user) []user {
 	return users
 }
 
-func getForwarded(chatId int64) user {
+func getForwarded(chatId int) user {
 	filters := getFilters(chatId)
 	filters["message.forward_from"] = bson.M{"$exists": true}
 
@@ -271,7 +299,7 @@ func getForwarded(chatId int64) user {
 	return result
 }
 
-func getFilters(chatId int64) bson.M {
+func getFilters(chatId int) bson.M {
 	y, m, d := time.Now().Date()
 	start := time.Date(y, m, d, 0, 0, 0, 0, time.Now().Location())
 	end := time.Date(y, m, d, 23, 59, 59, 0, time.Now().Location())

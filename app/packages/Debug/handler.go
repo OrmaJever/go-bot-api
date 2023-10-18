@@ -7,12 +7,10 @@ import (
 	"main/telegram"
 )
 
-type callback func(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot)
-
-var Commands map[string]callback
+var Commands map[string]services.CallbackT
 
 func init() {
-	Commands = make(map[string]callback)
+	Commands = make(map[string]services.CallbackT)
 	Commands["img"] = getImage
 }
 

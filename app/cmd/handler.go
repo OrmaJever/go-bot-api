@@ -6,6 +6,7 @@ import (
 	"log"
 	"main/models"
 	"main/packages/Admin"
+	"main/packages/Alerts"
 	"main/packages/ChatStatistic"
 	DebugPackage "main/packages/Debug"
 	"main/packages/GetId"
@@ -114,6 +115,13 @@ func CallPackages(bot *models.Bot, data *telegram.Data) {
 				Admin.Message(data, &tgApi, bot)
 			}
 
+		case "Alerts":
+			if Alerts.Commands[command] != nil {
+				Alerts.Commands[command](data, &tgApi, bot)
+				result = true
+			} else {
+				Alerts.Message(data, &tgApi, bot)
+			}
 		default:
 			log.Printf("Can not find package [%s]\n", name)
 		}

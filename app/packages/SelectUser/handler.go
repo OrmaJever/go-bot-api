@@ -14,16 +14,15 @@ import (
 	"time"
 )
 
-type callback func(data *telegram.Data, tgApi *services.Telegram, bot *models.Bot)
-
-var Commands map[string]callback
-var postgres *pg.DB
-var lang map[string]string
-
-var sleep time.Time
+var (
+	Commands map[string]services.CallbackT
+	postgres *pg.DB
+	lang     map[string]string
+	sleep    time.Time
+)
 
 func init() {
-	Commands = make(map[string]callback)
+	Commands = make(map[string]services.CallbackT)
 	Commands["reg"] = reg
 	Commands["check"] = check
 	Commands["run"] = run
