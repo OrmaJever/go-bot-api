@@ -69,6 +69,7 @@ func reg(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
 		_, err := postgres.Model(&user).Insert()
 		trans("reg_success")
+
 		if err == nil {
 			tgApi.SendMessage(data.Message.Chat.Id, trans("reg_success"), true, true)
 		} else {
