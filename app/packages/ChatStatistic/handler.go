@@ -206,7 +206,10 @@ func getVideoNotes(chatId int) int64 {
 
 func getForwardedCount(chatId int) int64 {
 	filter := getFilters(chatId)
-	filter["message.forwardfrom"] = bson.M{"$ne": nil}
+	filter["$or"] = bson.A{
+		bson.M{"message.forwardfrom": bson.M{"$ne": nil}},
+		bson.M{"message.forwardfromchat": bson.M{"$ne": nil}},
+	}
 
 	count, err := mongoCollection.CountDocuments(context.Background(), filter)
 
