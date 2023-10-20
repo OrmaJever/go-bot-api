@@ -182,24 +182,12 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		return
 	}
 
-	if err != nil {
-		log.Println(err)
-		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
-		return
-	}
-
 	var customize Customize
 
 	err = postgres.Model(&customize).
 		Where("user_id = ?", user.Id).
 		OrderExpr("random()").
 		Select()
-
-	if err != nil && err != sql.ErrNoRows {
-		log.Println(err)
-		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
-		return
-	}
 
 	selectedUser := SelectedUser{
 		TgId:        user.TgId,
