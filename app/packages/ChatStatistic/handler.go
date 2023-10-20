@@ -205,13 +205,13 @@ func getVideoNotes(chatId int) int64 {
 }
 
 func getForwardedCount(chatId int) int64 {
-	filter := getFilters(chatId)
-	filter["$or"] = bson.A{
+	filters := getFilters(chatId)
+	filters["$or"] = bson.A{
 		bson.M{"message.forwardfrom": bson.M{"$ne": nil}},
 		bson.M{"message.forwardfromchat": bson.M{"$ne": nil}},
 	}
 
-	count, err := mongoCollection.CountDocuments(context.Background(), filter)
+	count, err := mongoCollection.CountDocuments(context.Background(), filters)
 
 	if err != nil {
 		log.Println(err)
@@ -276,7 +276,10 @@ func getInactiveUsers(chatId int, activeUsers []user) []user {
 
 func getForwarded(chatId int) user {
 	filters := getFilters(chatId)
-	filters["message.forward_from"] = bson.M{"$exists": true}
+	filters["$or"] = bson.A{
+		bson.M{"message.forwardfrom": bson.M{"$ne": nil}},
+		bson.M{"message.forwardfromchat": bson.M{"$ne": nil}},
+	}
 
 	match := bson.D{{"$match", filters}}
 	group := bson.D{{"$group", bson.D{
