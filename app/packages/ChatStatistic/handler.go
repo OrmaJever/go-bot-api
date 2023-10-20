@@ -72,8 +72,17 @@ func statisticCommand(data *telegram.Data, tgApi *services.Telegram, bot *models
 	var mongoClient *mongo.Client
 	mongoCollection, mongoClient = services.ConnectToMongo()
 
-	defer postgres.Close()
-	defer mongoClient.Disconnect(context.Background())
+	defer func() {
+		err := postgres.Close()
+		if err != nil {
+			log.Println(err)
+		}
+
+		err = mongoClient.Disconnect(context.Background())
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
 	text := getFormattedText(chatId)
 
@@ -91,9 +100,22 @@ func calculateStatistic() {
 	var mongoClient *mongo.Client
 	mongoCollection, mongoClient = services.ConnectToMongo()
 
-	defer postgres.Close()
-	defer pgTg.Close()
-	defer mongoClient.Disconnect(context.Background())
+	defer func() {
+		err := postgres.Close()
+		if err != nil {
+			log.Println(err)
+		}
+
+		err = pgTg.Close()
+		if err != nil {
+			log.Println(err)
+		}
+
+		err = mongoClient.Disconnect(context.Background())
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
 	var bot models.Bot
 	err := pgTg.Model(&bot).
@@ -239,7 +261,11 @@ func getTopUsers(chatId int) []user {
 		return result
 	}
 
-	cursor.All(context.Background(), &result)
+	err = cursor.All(context.Background(), &result)
+
+	if err != nil {
+		log.Println(err)
+	}
 
 	return result
 }
@@ -300,7 +326,11 @@ func getForwarded(chatId int) user {
 		return result
 	}
 
-	cursor.Decode(&result)
+	err = cursor.Decode(&result)
+
+	if err != nil {
+		log.Println(err)
+	}
 
 	return result
 }

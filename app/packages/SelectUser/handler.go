@@ -1,6 +1,7 @@
 package SelectUser
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/go-pg/pg/v10"
@@ -54,9 +55,15 @@ func reg(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 	}
 	user := User{}
 
-	postgres.Model(&user).
+	err := postgres.Model(&user).
 		Where("tg_id = ? and chat_id = ?", data.Message.From.Id, data.Message.Chat.Id).
 		Select()
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
+		return
+	}
 
 	if user.Id > 0 {
 		text := fmt.Sprintf("Already reg in %s", user.CreatedAt)
@@ -74,7 +81,7 @@ func reg(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 			tgApi.SendMessage(data.Message.Chat.Id, trans("reg_success"), true, true)
 		} else {
 			log.Println(err)
-			tgApi.SendMessage(data.Message.Chat.Id, "Something wrong", true, true)
+			tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
 		}
 	}
 }
@@ -112,8 +119,10 @@ func check(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
 	_, err := postgres.Query(&selectedUser, query, data.Message.Chat.Id)
 
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
+		return
 	}
 
 	text := trans("pidor_result_header")
@@ -139,12 +148,18 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
 	var todayUser SelectedUser
 
-	postgres.Model(&todayUser).
+	err := postgres.Model(&todayUser).
 		Where("su.chat_id = ?", data.Message.Chat.Id).
 		Where("date(su.created_at) = ?", time.Now().Format("2006-01-02")).
 		Relation("User").
 		Relation("Customize").
 		First()
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
+		return
+	}
 
 	if todayUser.Id > 0 {
 		text := fmt.Sprintf(
@@ -163,22 +178,34 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
 	var user User
 
-	postgres.Model(&user).
+	err = postgres.Model(&user).
 		Where("chat_id = ?", data.Message.Chat.Id).
 		OrderExpr("random()").
 		Select()
 
-	if user.Id == 0 {
+	if err == sql.ErrNoRows {
 		tgApi.SendMessage(data.Message.Chat.Id, trans("empty_users"), true, true)
+		return
+	}
+
+	if err != nil {
+		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
 		return
 	}
 
 	var customize Customize
 
-	postgres.Model(&customize).
+	err = postgres.Model(&customize).
 		Where("user_id = ?", user.Id).
 		OrderExpr("random()").
 		Select()
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
+		return
+	}
 
 	selectedUser := SelectedUser{
 		TgId:        user.TgId,
@@ -189,10 +216,11 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		UpdatedAt:   time.Now().Format(time.RFC3339),
 	}
 
-	_, err := postgres.Model(&selectedUser).Insert()
+	_, err = postgres.Model(&selectedUser).Insert()
 
 	if err != nil {
 		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
 		return
 	}
 
@@ -235,6 +263,7 @@ func userlist(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 
 	if err != nil {
 		log.Println(err)
+		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
 		return
 	}
 
