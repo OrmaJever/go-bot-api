@@ -55,15 +55,9 @@ func reg(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 	}
 	user := User{}
 
-	err := postgres.Model(&user).
+	postgres.Model(&user).
 		Where("tg_id = ? and chat_id = ?", data.Message.From.Id, data.Message.Chat.Id).
 		Select()
-
-	if err != nil && err != sql.ErrNoRows {
-		log.Println(err)
-		tgApi.SendMessage(data.Message.Chat.Id, trans("error"), true, true)
-		return
-	}
 
 	if user.Id > 0 {
 		text := fmt.Sprintf("Already reg in %s", user.CreatedAt)
