@@ -203,7 +203,7 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 
-	text := trans(fmt.Sprintf("step1_%d", r1.Intn(4)))
+	text := trans(fmt.Sprintf("step1_%d", r1.Intn(5)))
 	tgApi.SendMessage(data.Message.Chat.Id, text, true, true)
 
 	time.Sleep(1 * time.Second)
@@ -223,7 +223,7 @@ func run(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
 		"AwACAgIAAxkBAAIBt2MjnLL_Bry2-vVz5giGxIp-68OMAALIHgACPVwhSVIQXq0eHGbVKQQ",
 	}
 
-	tgApi.SendVoice(data.Message.Chat.Id, voices[r1.Intn(1)], true, true)
+	tgApi.SendVoice(data.Message.Chat.Id, voices[r1.Intn(2)], true, true)
 }
 
 func userlist(data *telegram.Data, tgApi *services.Telegram, _ *models.Bot) {
